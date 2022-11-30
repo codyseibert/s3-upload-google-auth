@@ -1,19 +1,23 @@
+const { config } = require("dotenv");
+config();
+
 const express = require("express");
 const cors = require("cors");
 const app = express();
 const multer = require("multer");
 const upload = multer();
-const AWS = require("aws-sdk");
 const cookieParser = require("cookie-parser");
 const cookieSession = require("cookie-session");
-const Uploads = require("./models/uploads");
 const mongoose = require("mongoose");
 const passport = require("passport");
-const { config } = require("dotenv");
-
-config();
-
+const getFilesController = require("./controllers/getFilesController");
+const getFileController = require("./controllers/getFileController");
+const uploadFileController = require("./controllers/uploadFileController");
+const isAuthenticated = require("./middleware/isAuthenticated");
 const GoogleStrategy = require("passport-google-oauth2").Strategy;
+
+const PORT = process.env.PORT || 5000;
+const MONGO_URL = process.env.MONGO_URL;
 
 passport.use(
   new GoogleStrategy(
@@ -60,20 +64,10 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-const s3 = new AWS.S3({
-  endpoint: process.env.S3_ENDPOINT,
-  region: "us-east-1",
-  s3ForcePathStyle: true,
-});
-
-const PORT = process.env.PORT || 5000;
-const MONGO_URL = process.env.MONGO_URL;
-
 app.get(
   "/auth/google",
   passport.authenticate("google", { scope: ["email", "profile"] })
 );
-
 app.get(
   "/auth/google/callback",
   passport.authenticate("google", {
@@ -81,51 +75,14 @@ app.get(
     failureRedirect: "http://localhost:5173/error",
   })
 );
-
-function isAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
-    next();
-  } else {
-    res.status(401).json({
-      error: "unauthenticated",
-    });
-  }
-}
-
-app.post("/files", isAuthenticated, upload.single("file"), async (req, res) => {
-  const file = req.file;
-
-  const upload = new Uploads();
-  upload.filename = file.originalname;
-  const createdFile = await upload.save();
-
-  await s3
-    .putObject({
-      Key: file.originalname,
-      Bucket: process.env.BUCKET_NAME,
-      Body: file.buffer,
-    })
-    .promise();
-
-  res.json(createdFile);
-});
-
-app.get("/files", isAuthenticated, async (req, res) => {
-  const files = await Uploads.find();
-  res.json(files);
-});
-
-app.get("/files/:filename", isAuthenticated, async (req, res) => {
-  const data = await s3
-    .getObject({
-      Key: req.params.filename,
-      Bucket: process.env.BUCKET_NAME,
-    })
-    .promise();
-  res.attachment(req.params.filename);
-  res.type(data.ContentType);
-  res.send(data.Body);
-});
+app.post(
+  "/files",
+  isAuthenticated,
+  upload.single("file"),
+  uploadFileController
+);
+app.get("/files", isAuthenticated, getFilesController);
+app.get("/files/:filename", isAuthenticated, getFileController);
 
 mongoose.connect(MONGO_URL).then(() => {
   console.log(`listening on port ${PORT}`);
