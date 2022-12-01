@@ -75,6 +75,7 @@ app.get(
     failureRedirect: "http://localhost:5173/error",
   })
 );
+
 app.post(
   "/files",
   isAuthenticated,

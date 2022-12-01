@@ -32,10 +32,12 @@ function App() {
       {!isAuthenticated ? (
         <a href={`${API_URL}/auth/google`}>login</a>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="file">File</label>
-          <input onChange={handleFileSelect} id="file" type="file"></input>
-          <button>upload</button>
+        <>
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="file">File</label>
+            <input onChange={handleFileSelect} id="file" type="file"></input>
+            <button>upload</button>
+          </form>
 
           {uploads.map((upload) => (
             <div key={upload._id}>
@@ -44,7 +46,7 @@ function App() {
               </a>
             </div>
           ))}
-        </form>
+        </>
       )}
     </div>
   );

@@ -4,9 +4,9 @@ const UploadModel = require("../models/UploadModel");
 async function uploadFileController(req, res) {
   const file = req.file;
 
-  const upload = new Uploads();
+  const upload = new UploadModel();
   upload.filename = file.originalname;
-  const createdFile = await UploadModel.save();
+  const createdFile = await upload.save();
 
   await s3
     .putObject({
